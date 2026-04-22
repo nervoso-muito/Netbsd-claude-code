@@ -1,0 +1,2 @@
+cd ..
+tar cvzf /fserver/tmp/ncc.tar.gz ncc

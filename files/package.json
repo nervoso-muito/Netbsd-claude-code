@@ -1,0 +1,22 @@
+{
+  "name": "ncc",
+  "version": "0.1.0",
+  "description": "NetBSD Claude Code — Native Node.js CLI for Claude",
+  "type": "module",
+  "bin": {
+    "ncc": "./bin/ncc.mjs"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.90.0",
+    "marked": "^15.0.0",
+    "marked-terminal": "^7.0.0",
+    "chalk": "^5.4.0",
+    "picomatch": "^4.0.0",
+    "fast-glob": "^3.3.0",
+    "diff": "^7.0.0",
+    "jsonc-parser": "^3.3.0"
+  }
+}

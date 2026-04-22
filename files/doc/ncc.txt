@@ -1,0 +1,230 @@
+NCC - NetBSD Claude Code
+=========================
+Version 0.1.0
+
+A native Node.js implementation of Claude Code for NetBSD.
+Uses your claude.ai Pro/Team account via OAuth, or an Anthropic API key.
+
+INSTALLATION
+------------
+  cd /usr/pkgsrc/mate/ncc && make install
+
+AUTHENTICATION
+--------------
+  ncc login          Choose OAuth or API key authentication
+  ncc logout         Remove stored credentials
+
+  OAuth flow:
+    1. Run: ncc login
+    2. Choose option 1 (OAuth)
+    3. Open the URL shown in your browser
+    4. Click "Authorize" on claude.ai
+    5. Copy the code shown in the browser
+    6. Paste it in the terminal
+
+  API key flow:
+    1. Run: ncc login
+    2. Choose option 2 (API Key)
+    3. Paste your sk-... key from console.anthropic.com
+
+  Credentials are stored in ~/.claude/.credentials.json (mode 0600).
+
+USAGE
+-----
+  ncc                      Start interactive REPL
+  ncc "your prompt"        Start REPL with initial prompt
+  ncc -p "your prompt"     One-shot mode (print response and exit)
+  ncc -m MODEL             Override model (e.g. claude-haiku-4-5)
+  ncc -v, --version        Show version
+  ncc -h, --help           Show help
+
+REPL COMMANDS
+-------------
+  /help                    Show all available commands
+  /quit, /exit             Save session and exit
+  /clear                   Clear conversation history
+  /compact [focus]         Compress conversation to save context
+  /cost                    Show token usage for this session
+  /context                 Show context window info
+  /model [name]            Show or switch model mid-session
+  /mode [ask|plan|auto]    Show or change permission mode
+  /save                    Save session without exiting
+  /resume [id]             List saved sessions or resume one
+  /init                    Generate CLAUDE.md for current project
+  /skills                  List available custom skills
+
+MODELS
+------
+  claude-sonnet-4-6        Default. Best speed/intelligence balance.
+  claude-haiku-4-5         Fastest. Good for quick tasks.
+  claude-opus-4-7          Most capable. Complex reasoning.
+
+  Switch model mid-session:   /model claude-haiku-4-5
+  Override at startup:         ncc -m claude-opus-4-7
+
+SESSIONS
+--------
+  Sessions auto-save on /quit or /exit.
+
+  Example:
+    $ ncc
+    > help me write a Makefile
+    [... response ...]
+    > /quit
+    Session saved: 3d55a014-7803-421e-a351-ae4adbcddac1
+    Resume with: ncc then /resume 3d55a014
+    Goodbye.
+
+    $ ncc
+    > /resume
+      3d55a014  2026-04-21  4 msgs  claude-sonnet-4-6
+    > /resume 3d55a014
+    Resumed session 3d55a014 (4 messages)
+    > now add install target
+    [... continues with full context ...]
+
+  Sessions are stored in ~/.claude/sessions/ as JSON files.
+
+TOOLS
+-----
+  NCC provides Claude with 13 tools it can use autonomously:
+
+  File Operations:
+    Read             Read files (text, images, PDFs, notebooks)
+    Write            Create new files
+    Edit             String replacement in existing files
+    Glob             Find files by pattern (e.g. **/*.c)
+    Grep             Search file contents with regex
+    NotebookEdit     Edit Jupyter notebook cells
+
+  System:
+    Bash             Execute shell commands
+    Agent            Launch sub-agents for complex tasks
+
+  Web:
+    WebFetch         Fetch and process URL content
+    WebSearch        Search the web
+
+  Task Management:
+    TodoWrite        Create/update task lists
+    TodoRead         Read current task list
+
+  Skills:
+    Skill            Invoke a custom skill
+
+PERMISSION MODES
+----------------
+  ask    (default)   Ask before every tool use
+  plan               Read-only tools auto-approved, write tools ask
+  auto               All tools auto-approved
+
+  Change mode:  /mode auto
+  Check mode:   /mode
+
+CUSTOM SKILLS
+-------------
+  Skills are slash commands defined as markdown files.
+
+  Locations (in priority order):
+    ~/.claude/skills/<name>/SKILL.md      Personal skills
+    .claude/skills/<name>/SKILL.md        Project skills
+    ~/.claude/commands/<name>.md           Legacy commands
+
+  SKILL.md format:
+    ---
+    name: commit
+    description: Commit staged changes
+    argument-hint: [message]
+    ---
+    Review staged changes with `git diff --cached`.
+    If $ARGUMENTS is provided, use it as the commit message.
+    Otherwise, generate a descriptive message.
+
+  Invoke with:  /commit fix the login bug
+
+  Frontmatter options:
+    name                     Skill name (defaults to directory name)
+    description              What the skill does
+    argument-hint            Shown in /help (e.g. [issue-number])
+    disable-model-invocation Only user can invoke (not Claude)
+    user-invocable           Set to false to hide from /help
+
+  Dynamic content:
+    $ARGUMENTS               All arguments after the command
+    $ARGUMENTS[0]            First argument
+    !`git status`            Run command, inject output
+
+PROJECT CONTEXT
+---------------
+  NCC loads instructions from these files at startup:
+
+    CLAUDE.md                 In project dir and all parent dirs
+    ~/.claude/CLAUDE.md       Global instructions
+    ~/.claude/rules/**/*.md   Rule files
+    ~/.claude/projects/<id>/memory/MEMORY.md   Auto-memory
+
+  Use /init to generate a CLAUDE.md for your project.
+
+ENVIRONMENT VARIABLES
+---------------------
+  ANTHROPIC_API_KEY          API key (skips OAuth)
+  CLAUDE_MODEL               Override default model
+  ANTHROPIC_BASE_URL         Custom API endpoint
+  MAX_THINKING_TOKENS        Override thinking token budget
+
+FILES
+-----
+  ~/.claude/.credentials.json   OAuth/API key credentials
+  ~/.claude/settings.json       Global settings (JSONC)
+  ~/.claude/sessions/           Saved sessions
+  ~/.claude/skills/             Personal skills
+  ~/.claude/rules/              Rule files
+  ~/.claude/projects/           Per-project memory
+  .claude/settings.json         Project settings
+  .claude/skills/               Project skills
+  CLAUDE.md                     Project instructions
+
+EXAMPLES
+--------
+  # Quick question
+  ncc -p "What is the NetBSD kernel config syntax?"
+
+  # Interactive coding session
+  ncc
+  > read main.c and fix the memory leak
+
+  # Use fast model for simple tasks
+  ncc -m claude-haiku-4-5
+  > explain this error message: segfault at 0x0
+
+  # Resume previous work
+  ncc
+  > /resume 3d55a014
+  > continue where we left off
+
+  # Create a custom skill
+  mkdir -p ~/.claude/skills/review
+  cat > ~/.claude/skills/review/SKILL.md << 'EOF'
+  ---
+  name: review
+  description: Code review current changes
+  ---
+  Review the changes in `git diff` for:
+  - Bugs and logic errors
+  - Security issues
+  - Style violations
+  - Missing error handling
+  EOF
+
+  ncc
+  > /review
+
+REQUIREMENTS
+------------
+  NetBSD 10.x or later
+  Node.js >= 22.0.0 (via pkgsrc lang/nodejs)
+  Internet connection to api.anthropic.com
+
+LICENSE
+-------
+  ISC
